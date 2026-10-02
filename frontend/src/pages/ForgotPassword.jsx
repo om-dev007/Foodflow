@@ -4,6 +4,7 @@ import { FaEye, FaRegEyeSlash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { serverUrl } from "../App";
+import { ClipLoader } from "react-spinners";
 
 const ForgotPassword = () => {
   const primaryColor = "#ff4d2d";
@@ -19,6 +20,7 @@ const ForgotPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState("");
 
   const navigate = useNavigate();
 
@@ -38,9 +40,10 @@ const ForgotPassword = () => {
     try {
       await axios.post(`${serverUrl}/api/auth/send-otp`, { email }, { withCredentials: true });
       setStep(2);
+      setError("");
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || "Failed to send OTP. Please try again.");
+      setError(error.response?.data?.message || "Failed to send OTP. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -52,9 +55,10 @@ const ForgotPassword = () => {
     try {
       await axios.post(`${serverUrl}/api/auth/verify-otp`, { email, otp }, { withCredentials: true });
       setStep(3);
+      setError("");
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || "Invalid OTP. Please check and try again.");
+      setError(error.response?.data?.message || "Invalid OTP. Please check and try again.");
     } finally {
       setLoading(false);
     }
@@ -63,7 +67,7 @@ const ForgotPassword = () => {
   const handleResetPassword = async (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      alert("Passwords do not match");
+      setError("Passwords do not match");
       return;
     }
     setLoading(true);
@@ -72,9 +76,10 @@ const ForgotPassword = () => {
       await axios.post(`${serverUrl}/api/auth/reset-password`, { email, newpassword }, { withCredentials: true });
       alert("Password updated successfully!");
       navigate("/signin");
+      setError("")
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || "Failed to reset password.");
+      setError(error.response?.data?.message || "Failed to reset password.");
     } finally {
       setLoading(false);
     }
@@ -130,8 +135,9 @@ const ForgotPassword = () => {
               onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = hoverColor)}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = primaryColor)}
             >
-              {loading ? "Sending..." : "Send OTP"}
+              {loading ? <ClipLoader size={20} color="white"/> : "Send OTP"}
             </button>
+            <p className="text-red-500 text-center my-2.5"> {error} </p>
           </form>
         )}
 
@@ -161,7 +167,7 @@ const ForgotPassword = () => {
               onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = hoverColor)}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = primaryColor)}
             >
-              {loading ? "Verifying..." : "Verify OTP"}
+              {loading ? <ClipLoader size={20} color="white"/> : "Verify OTP"}
             </button>
             <button 
               type="button" 
@@ -171,6 +177,7 @@ const ForgotPassword = () => {
             >
               Resend Code
             </button>
+            <p className="text-red-500 text-center my-2.5"> {error} </p>
           </form>
         )}
 
@@ -237,8 +244,9 @@ const ForgotPassword = () => {
               onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = hoverColor)}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = primaryColor)}
             >
-              {loading ? "Updating..." : "Update Password"}
+              {loading ? <ClipLoader size={20} color="white"/> : "Update Password"}
             </button>
+            <p className="text-red-500 text-center my-2.5"> {error} </p>
           </form>
         )}
       </div>

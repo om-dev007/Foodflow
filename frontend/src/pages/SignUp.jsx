@@ -5,6 +5,7 @@ import axios from "axios";
 import { serverUrl } from "../App";
 import {signInWithPopup, GoogleAuthProvider} from "firebase/auth"
 import {auth} from "../utils/firebase"
+import {ClipLoader} from "react-spinners"
 
 const SignUp = () => {
   const primaryColor = "#ff4d2d";
@@ -21,6 +22,7 @@ const SignUp = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [mobile, setMobile] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -36,9 +38,9 @@ const SignUp = () => {
 
   const handleSignUp = async (e) => {
     e.preventDefault();
-
+    setLoading(true);
     if (password !== confirmPassword) {
-      alert("Passwords do not match!");
+      setError("Passwords do not match!");
       return;
     }
 
@@ -48,37 +50,35 @@ const SignUp = () => {
         { fullName, email, password, role, mobile },
         { withCredentials: true }
       );
-      
+      setLoading(false);
       setError("");
       if (response.data) {
-        console.log("Signup successful:", response.data);
         navigate("/signin");
       }
     } catch (error) {
-      setError(error.response.message)
+      setLoading(false);
+      setError(error?.response?.data?.message)
       console.error("Signup error: ", error.response?.data || error.message);
-      alert(error.response?.data?.message || "Registration failed. Please check your details.");
     }
   };
 
   const handleGoogleAuth = async () => {
     if(!mobile || mobile.length < 10) {
-      return alert("Mobile number is required")
+      return setError("Mobile number is required")
     }
     const provider = new GoogleAuthProvider();
     const data = await signInWithPopup(auth, provider);
 
     try {
-      const result = await axios.post(`${serverUrl}/api/auth/google-auth`, {
+      await axios.post(`${serverUrl}/api/auth/google-auth`, {
         fullName: data?.user.displayName,
         email: data?.user.email,
         mobile,
         role
       }, {withCredentials: true})
       navigate("/");
-      console.log("Result: ", result);
     } catch (error) {
-      setError(error.res.data.error)
+      setError(error?.res?.data?.error)
       console.log(error)
     }
   }
@@ -250,10 +250,11 @@ const SignUp = () => {
             style={{ backgroundColor: primaryColor }}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = hoverColor)}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = primaryColor)}
+            disabled={loading}
           >
-            Create Account
+            {loading ? <ClipLoader size={20} color="white"/> : "Create Account"}
           </button>
-
+          <p className="text-red-500 text-center my-2.5"> {error} </p>
           <button
             onClick={handleGoogleAuth}
             type="button"

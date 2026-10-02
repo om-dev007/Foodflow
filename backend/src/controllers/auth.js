@@ -5,11 +5,12 @@ import { genOtp } from "../utils/genOtp.js";
 import { sendOtpMail } from "../utils/mail.js";
 
 const sanitizeInput = (input) => {
-    if(typeof input == String) {
+    if (typeof input === "string") {
         return input.trim().toLowerCase();
     }
-    return;
-}
+
+    return input;
+};
 
 export const signUp = async (req, res) => {
 
@@ -20,7 +21,7 @@ export const signUp = async (req, res) => {
         sanitizeInput(email);
         sanitizeInput(role);
 
-        let user = await UserModel.findOne({email});
+        let user = await UserModel.findOne({ email });
 
         if (user) {
             return res.status(400).json({
@@ -46,14 +47,15 @@ export const signUp = async (req, res) => {
             email,
             mobile,
             role,
-            password: hashedPassword,}
+            password: hashedPassword,
+        }
         )
 
         const token = genToken(user._id);
 
         res.cookie("token", token, {
             secure: false,
-            sameSite: "strict",
+            sameSite: "lax",
             maxAge: 7 * 24 * 60 * 60 * 1000,
             httpOnly: true
         });
@@ -61,26 +63,25 @@ export const signUp = async (req, res) => {
             user
         })
     } catch (err) {
-        console.log("Signup error: ", err);
         return res.status(500).json({
             error: err
         })
     }
 }
 
-export const signIn = async(req, res) => {
+export const signIn = async (req, res) => {
     try {
-        const {email,password} = req.body;
+        const { email, password } = req.body;
         sanitizeInput(email);
-        let user = await UserModel.findOne({email});
-        if(!user) {
+        let user = await UserModel.findOne({ email });
+        if (!user) {
             return res.status(400).json({
                 message: "User does not exist"
             })
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
-        if(!isMatch) {
+        if (!isMatch) {
             return res.status(403).json({
                 message: "Invalid credentials"
             })
@@ -89,8 +90,8 @@ export const signIn = async(req, res) => {
         const token = genToken(user._id);
         res.cookie("token", token, {
             secure: false,
-            sameSite: "strict",
-            maxAge: 7*24*60*60*1000,
+            sameSite: "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
             httpOnly: true
         })
 
@@ -98,7 +99,6 @@ export const signIn = async(req, res) => {
             user
         })
     } catch (error) {
-        console.log("Error while signing in", error);
         return res.status(500).json({
             error: error
         })
@@ -107,12 +107,15 @@ export const signIn = async(req, res) => {
 
 export const signOut = async (req, res) => {
     try {
-        res.clearCookie("token")
+        res.clearCookie("token", {
+            httpOnly: true,
+            secure: false,
+            sameSite: "strict"
+        });
         return res.status(200).json({
             message: "Log out successfully"
         })
     } catch (error) {
-        console.log("Error while signing out ", error);
         return res.status(500).json({
             error
         })
@@ -121,18 +124,18 @@ export const signOut = async (req, res) => {
 
 export const sendOtp = async (req, res) => {
     try {
-        let {email} = req.body;
+        let { email } = req.body;
         email = email.trim().toLowerCase();
-        let user = await UserModel.findOne({email});
-        if(!user) {
+        let user = await UserModel.findOne({ email });
+        if (!user) {
             return res.status(404).json({
                 message: "User does not exist"
             })
         }
 
         const otp = genOtp();
-        user.otp= otp;
-        user.otpExpires = Date.now() + 5*60*1000;
+        user.otp = otp;
+        user.otpExpires = Date.now() + 5 * 60 * 1000;
         user.isOtpVerified = false;
         await user.save();
         sendOtpMail(email, otp);
@@ -148,20 +151,20 @@ export const sendOtp = async (req, res) => {
 
 export const verifyOtp = async (req, res) => {
     try {
-        let {email, otp} = req.body;
+        let { email, otp } = req.body;
         email = email.trim().toLowerCase();
-        const user = await UserModel.findOne({email});
-        if(!user) {
+        const user = await UserModel.findOne({ email });
+        if (!user) {
             return res.status(404).json({
                 message: "User does not exist"
             })
         }
-        if(user.otp != otp) {
+        if (user.otp != otp) {
             return res.status(404).json({
                 message: "Please enter valid otp"
             })
         }
-        if(user.otpExpires < Date.now()) {
+        if (user.otpExpires < Date.now()) {
             return res.status(400).json({
                 message: "Otp expires please resent otp"
             })
@@ -182,15 +185,15 @@ export const verifyOtp = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
     try {
-        let {email, newpassword} = req.body;
+        let { email, newpassword } = req.body;
         email = email.trim().toLowerCase();
-        const user = await UserModel.findOne({email});
-        if(!user) {
+        const user = await UserModel.findOne({ email });
+        if (!user) {
             return res.status(404).json({
                 message: "User does not found"
             })
         }
-        if(!user.isOtpVerified) {
+        if (!user.isOtpVerified) {
             return res.status(400).json({
                 message: "Please verify otp first"
             })
@@ -210,10 +213,10 @@ export const resetPassword = async (req, res) => {
 
 export const googleAuth = async (req, res) => {
     try {
-        const {fullName, email, mobile, role} = req.body;
-        let user = await UserModel.findOne({email});
-        if(!user) {
-            user = await UserModel.create({fullName, email, mobile, role})
+        const { fullName, email, mobile, role } = req.body;
+        let user = await UserModel.findOne({ email });
+        if (!user) {
+            user = await UserModel.create({ fullName, email, mobile, role })
         }
         user.isOtpVerified = true;
         await user.save();
@@ -221,7 +224,7 @@ export const googleAuth = async (req, res) => {
         res.cookie("token", token, {
             secure: false,
             sameSite: "strict",
-            maxAge: 7*24*60*60*1000,
+            maxAge: 7 * 24 * 60 * 60 * 1000,
             httpOnly: true
         })
 

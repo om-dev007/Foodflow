@@ -6,6 +6,7 @@ import axios from "axios";
 import {GoogleAuthProvider, signInWithPopup} from "firebase/auth"
 import { auth } from "../utils/firebase";
 import { FaGoogle } from "react-icons/fa";
+import { ClipLoader } from "react-spinners";
 
 const SignIn = () => {
   // Brand Colors
@@ -19,6 +20,8 @@ const SignIn = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleFocus = (e) => {
     e.target.style.borderColor = primaryColor;
@@ -32,14 +35,18 @@ const SignIn = () => {
 
   const handleSignIn = async (e) => {
     e.preventDefault();
+    setLoading(true)
     try {
       const result = await axios.post(`${serverUrl}/api/auth/signin`, {email, password}, { withCredentials: true })
       if(result.data) {
-        console.log("Sign in successfully:", result.data);
         navigate("/")
       }
+      setError("");
+      setLoading(false);
     } catch (error) {
-      console.log("Signin error: ", error); 
+      setLoading(false);
+      setError(error?.response?.data?.message);
+      console.error("Signin error: ", error); 
     }
   }
 
@@ -48,13 +55,14 @@ const SignIn = () => {
     const data = await signInWithPopup(auth, provider);
 
     try {
-      const result = await axios.post(`${serverUrl}/api/auth/google-auth`, {
+      await axios.post(`${serverUrl}/api/auth/google-auth`, {
         email: data?.user.email
       }, {withCredentials: true})
       navigate("/")
-      console.log("Result: ", result);
+      setError("");
     } catch (error) {
-      console.log(error)
+      setError(error?.response?.data?.message);
+      console.error(error)
     }
   }
 
@@ -147,9 +155,11 @@ const SignIn = () => {
             style={{ backgroundColor: primaryColor }}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = hoverColor)}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = primaryColor)}
+            disabled={loading}
           >
-            Sign In
+            {loading? <ClipLoader size={20} color="white"/> : "Sign In"}
           </button>
+          <p className="text-red-500 text-center my-2.5"> {error} </p>
           <button
                       onClick={handleGoogleAuth}
                       type="button"
